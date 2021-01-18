@@ -1,1 +1,1 @@
-# GSU_projects
+# Projects
