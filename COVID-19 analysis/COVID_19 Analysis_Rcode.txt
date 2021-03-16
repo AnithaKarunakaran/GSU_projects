@@ -1,0 +1,524 @@
+######################################################################################################################
+####  First name  : Anitha
+####  Last name   : Karunakaran
+######################################################################################################################
+
+#setting working directory
+
+#part a
+
+#load data
+Covid <- read.csv("Covid_Data.csv")
+str(Covid)
+summary(Covid)
+
+#OBSERVATIONS ON COVID DATA:
+#from initial investigation we see all the 7 variables(features+target) are characters,
+#so let's convert the required features as factors
+#and some features have large number of "Missing" values in it
+
+#These variables should be treated as categorical and converted to factors
+# sex
+# age group
+# Race.Ethnicity: Race and Ethnicity (combined)
+# hosp yn: Was the patient hospitalized?
+# medcond yn: Pre-existing medical conditions?
+# death yn: Did the patient die as a result of this illness?
+
+Covid$sex <- factor(Covid$sex)
+Covid$age_group <- factor(Covid$age_group)
+Covid$Race.Ethnicity <- factor(Covid$Race.Ethnicity)
+Covid$hosp_yn <- factor(Covid$hosp_yn)
+Covid$medcond_yn <- factor(Covid$medcond_yn)
+Covid$death_yn <- factor(Covid$death_yn)
+
+str(Covid)
+summary(Covid)
+
+
+#Plot the the number of all cases based on age group. 
+par(mar=c(4,4,2,2))
+plot(Covid$age_group,xlab="Age group",ylab="number of all cases")
+
+#Do this plot again for the cases who died of COVID-19.
+par(mar=c(4,4,2,2))
+plot(Covid$death_yn,xlab="cases who died of COVID-19",ylab="number of all cases")
+
+#based on age-group see how many died of COVID-19
+par(mar=c(3,4,2,1))
+layout(matrix(c(1,2,3,4),2,2))
+plot(Covid$age_group,xlab="Age group",ylab="number of all cases")
+plot(Covid$death_yn,xlab="cases who died of COVID-19",ylab="number of all cases")
+plot(Covid$age_group,Covid$death_yn,xlab="Age group",ylab="number of all cases")
+
+#######################################
+
+#part b
+
+#for each variable impute the missing values with the mode of that variable, 
+#i.e. replace the “Missing” values with the most frequent observed value for that variable.
+
+table(Covid$sex)
+table(Covid$age_group)
+table(Covid$Race.Ethnicity) #has "Missing" as second mode (second highest repeating value)
+table(Covid$hosp_yn) #has "Missing" as first mode (highest repeating value)
+table(Covid$medcond_yn) #has "Missing" as first mode (highest repeating value)
+table(Covid$death_yn) #has "Missing" as first mode (highest repeating value)
+
+#checking mode value of Race.Ethnicity column
+table <- table(Covid$Race.Ethnicity)
+table
+max(table)
+
+#to get 2nd highest repeating value for columns: Covid$hosp_yn ,Covid$medcond_yn, Covid$death_yn
+table <- table(Covid$death_yn)
+table
+n <- length(table)
+mode.2 <- sort(table,partial=n-1)[n-1]
+mode.2
+max(mode.2)
+  
+df_test <- Covid
+
+#missing value imputaion
+for (var in 1:ncol(df_test)) {
+  if (colnames(df_test[var]) %in% c("Race.Ethnicity")) { df_test[df_test[,var]=="Missing",var] <- "White, Non-Hispanic"
+  } else if (colnames(df_test[var]) %in% c("hosp_yn")) { df_test[df_test[,var]=="Missing",var] <- "No"
+  } else if (colnames(df_test[var]) %in% c("medcond_yn")) { df_test[df_test[,var]=="Missing",var] <- "No"
+  } else if (colnames(df_test[var]) %in% c("death_yn")) { df_test[df_test[,var]=="Missing",var] <- "No"
+  }
+}
+
+Covid_missingImputed <- df_test
+
+#checking values to see if all "Missing" records are imputed correctly
+table(Covid_missingImputed$sex)
+table(Covid_missingImputed$age_group)
+table(Covid_missingImputed$Race.Ethnicity)
+table(Covid_missingImputed$hosp_yn)
+table(Covid_missingImputed$medcond_yn)
+table(Covid_missingImputed$death_yn)
+
+#split data into train and test
+set.seed(144)
+library(caTools)
+split = sample.split(Covid_missingImputed$death_yn, SplitRatio = 0.7)
+train = subset(Covid_missingImputed,split==TRUE)
+test = subset(Covid_missingImputed,split==FALSE)
+dim(train) #2187310       7
+dim(test)  #937418      7
+
+#logistic regression model
+#dependent variable is “death yn”, and 
+#“sex”, “age group”, “Race.Ethnicity”, “hosp yn”,“medcond yn” are independent variables
+glm.fit = glm(death_yn~sex+age_group+Race.Ethnicity+hosp_yn+medcond_yn , 
+              data=train, 
+              family=binomial(logit))
+summary(glm.fit)
+#variables with low p.values are significant when comparing against alpha=0.05
+#variables are significant in this model
+#                                                                     Estimate Std. Error z value Pr(>|z|) 
+#  sexMale                                                             0.35231    0.01579  22.306  < 2e-16 ***
+#  age_group20 - 29 Years                                              0.68909    0.30444   2.263   0.0236 *  
+#  age_group30 - 39 Years                                              1.61563    0.29587   5.461 4.75e-08 ***
+#  age_group40 - 49 Years                                              2.17179    0.29300   7.412 1.24e-13 ***
+#  age_group50 - 59 Years                                              3.17673    0.29022  10.946  < 2e-16 ***
+#  age_group60 - 69 Years                                              4.23599    0.28940  14.637  < 2e-16 ***
+#  age_group70 - 79 Years                                              5.24799    0.28918  18.148  < 2e-16 ***
+#  age_group80+ Years                                                  6.41599    0.28905  22.197  < 2e-16 ***
+#  Race.EthnicityAsian, Non-Hispanic                                  -0.57056    0.11299  -5.050 4.43e-07 ***
+#  Race.EthnicityBlack, Non-Hispanic                                  -0.25745    0.09332  -2.759   0.0058 ** 
+#  Race.EthnicityHispanic/Latino                                      -0.23211    0.09290  -2.498   0.0125 *  
+#  Race.EthnicityMultiple/Other, Non-Hispanic                         -0.53220    0.09813  -5.424 5.84e-08 ***
+#  Race.EthnicityNative Hawaiian/Other Pacific Islander, Non-Hispanic -0.51411    0.25996  -1.978   0.0480 *  
+#  Race.EthnicityWhite, Non-Hispanic                                  -0.56054    0.08888  -6.307 2.85e-10 ***
+#  hosp_ynYes                                                          2.12172    0.01647 128.820  < 2e-16 ***
+#  medcond_ynYes                                                       0.17778    0.02148   8.275  < 2e-16 ***
+
+
+#######################################
+
+#part c
+
+#coefficient of the “sexMale” variable
+print(paste("coefficient of the “sexMale” variable =",round(summary(glm.fit)$coef["sexMale",1],4)))
+#"coefficient of the “sexMale” variable = 0.3523"
+
+#explanation
+#For COVID-19 patients A and B who are identical other than A having sex as Male, 
+#the predicted log odds of A is 0.3523 more than the predicted log odds of B.
+#Then we have:
+#      ln(odds of A) = ln(odds of B) + 0.3523
+#=)  e^ln(odds of A) = e^ln(odds of B) + 0.3523
+#=)  e^ln(odds of A) = e^ln(odds of B) * e^0.3523
+#=)      (odds of A) = e^0.3523(odds of B) = 1.4223(odds of B)
+
+print(paste("value of e^0.3523 =",round(exp(0.3523),4)))
+#"value of e^0.3523 = 1.4223"
+
+#######################################
+
+#part d
+
+#odd's ratio of one is 75 years old and the other one is 36 years old.
+
+print(paste("coefficient of the “age_group70 - 79 Years” variable =",round(summary(glm.fit)$coef["age_group70 - 79 Years",1],4)))
+#"coefficient of the “age_group70 - 79 Years” variable = 5.248"
+
+print(paste("coefficient of the “age_group30 - 39 Years” variable =",round(summary(glm.fit)$coef["age_group30 - 39 Years",1],4)))
+# "coefficient of the “age_group30 - 39 Years” variable = 1.6156"
+
+#differnce in value is 3.6324
+round(summary(glm.fit)$coef["age_group70 - 79 Years",1],4) - round(summary(glm.fit)$coef["age_group30 - 39 Years",1],4)
+
+#explanation
+#For COVID-19 patients A and B who are identical other than A having age as 75 and 36 respectively, 
+#the predicted log odds of A is 3.6324 more than the predicted log odds of B.
+#Then we have:
+#      ln(odds of A) = ln(odds of B) + 3.6324
+#=)  e^ln(odds of A) = e^ln(odds of B) + 3.6324
+#=)  e^ln(odds of A) = e^ln(odds of B) * e^3.6324
+#=)      (odds of A) = e^3.6324(odds of B) = 37.8034(odds of B)
+
+print(paste("value of e^3.6324 =",round(exp(3.6324),4)))
+#value of e^3.6324 = 37.8034"
+
+#######################################
+
+#part e
+
+#What do you observe about the risk of COVID death for people of color versus white people?
+
+#  Race.EthnicityAsian, Non-Hispanic                                  -0.57056    0.11299  -5.050 4.43e-07 ***
+#  Race.EthnicityBlack, Non-Hispanic                                  -0.25745    0.09332  -2.759   0.0058 ** 
+#  Race.EthnicityHispanic/Latino                                      -0.23211    0.09290  -2.498   0.0125 *  
+#  Race.EthnicityMultiple/Other, Non-Hispanic                         -0.53220    0.09813  -5.424 5.84e-08 ***
+#  Race.EthnicityNative Hawaiian/Other Pacific Islander, Non-Hispanic -0.51411    0.25996  -1.978   0.0480 *  
+#  Race.EthnicityWhite, Non-Hispanic                                  -0.56054    0.08888  -6.307 2.85e-10 ***
+
+#based on the p.value, we see that white people 2.85e-10 <<< alpha=0.05
+#  Race.EthnicityWhite, Non-Hispanic                                  -0.56054    0.08888  -6.307 2.85e-10 ***
+
+#we see that people of color p.value is not <<< alpha=0.05
+
+#from this we can say that the risk of COVID death is more in people of color compared to white people
+
+#######################################
+
+#part f
+patientA <- data.frame("sex"=factor("Female"),"age_group"=factor("20 - 29 Years"),
+                     "Race.Ethnicity"=factor("Asian, Non-Hispanic"),"hosp_yn"=factor("No"), "medcond_yn"=factor("No"))
+glm.pred = predict.glm(glm.fit,newdata=patientA)
+glm.pred1 = predict.glm(glm.fit,newdata=patientA,type="response")
+print(paste("patientA survival:","odds =",round(glm.pred,4),"and probability=",round(glm.pred1,4)))
+#"patientA survival: odds = -8.6056 and probability= 2e-04"
+
+
+patientB <- data.frame("sex"=factor("Female"),"age_group"=factor("80+ Years"),
+                       "Race.Ethnicity"=factor("Asian, Non-Hispanic"),"hosp_yn"=factor("No"), "medcond_yn"=factor("Yes"))
+glm.pred = predict.glm(glm.fit,newdata=patientB)
+glm.pred1 = predict.glm(glm.fit,newdata=patientB,type="response")
+print(paste("patientB survival:","odds =",round(glm.pred,4),"and probability=",round(glm.pred1,4)))
+#"patientB survival: odds = -2.7009 and probability= 0.0629"
+
+#######################################
+
+#part g
+
+#model’s predicted probabilities for patients in the testing set
+glm.pred_testData = predict(glm.fit,test,type="response")
+#glm.pred_testData
+
+#threshold = 0.2
+
+#creating probability of "death_yn" column based on threshold values on test data
+glm.pred = rep("No",937418)
+glm.pred[glm.pred_testData >.2] = "Yes"
+#glm.pred
+
+#actual value of "death_yn" column in test data
+death_yn.testData = factor(test$death_yn)
+#death_yn.testData
+
+#making it look simiar to slide
+table(death_yn.testData,glm.pred) # actual vs prediction
+
+tp = sum(glm.pred=="Yes" & death_yn.testData=="Yes")
+tn = sum(glm.pred=="No" & death_yn.testData=="No")
+fp = sum(glm.pred=="Yes" & death_yn.testData=="No")
+fn = sum(glm.pred=="No" & death_yn.testData=="Yes")
+
+print(paste("tp =",tp,"tn =",tn, "fp =",fp,"fn =",fn))
+#"tp = 2120 tn = 923611 fp = 5509 fn = 6178"
+
+accuracy <- (tp+tn)/(tp+tn+fp+fn)
+sensitivity <- tp/(tp+fn)
+specificity <- tn/(tn+fp)
+gmean <- sqrt(sensitivity*specificity)
+
+print(paste("accuracy =",round(accuracy,4), "sensitivity =",round(sensitivity,4),
+            "specificity =",round(specificity,4), "gmean =",round(gmean,4)))
+#"accuracy = 0.9875 sensitivity = 0.2555 specificity = 0.9941 gmean = 0.504"
+
+#######################################
+
+#part h
+
+#accuracy of a simple model that predicts that all patients will survive
+
+#creating probability of "death_yn" column as "No" i.e. no death => all patient survive
+glm.pred = rep("No",937418)
+#glm.pred
+
+#actual value of "death_yn" column in test data
+death_yn.testData = factor(test$death_yn)
+#death_yn.testData
+
+#making it look simiar to slide
+table(death_yn.testData,glm.pred) # actual vs prediction
+
+tp = sum(glm.pred=="Yes" & death_yn.testData=="Yes")
+tn = sum(glm.pred=="No" & death_yn.testData=="No")
+fp = sum(glm.pred=="Yes" & death_yn.testData=="No")
+fn = sum(glm.pred=="No" & death_yn.testData=="Yes")
+
+print(paste("tp =",tp,"tn =",tn, "fp =",fp,"fn =",fn))
+#"tp = 0 tn = 929120 fp = 0 fn = 8298"
+
+accuracy <- (tp+tn)/(tp+tn+fp+fn)
+sensitivity <- tp/(tp+fn)
+specificity <- tn/(tn+fp)
+gmean <- sqrt(sensitivity*specificity)
+
+print(paste("accuracy =",round(accuracy,4), "sensitivity =",round(sensitivity,4),
+            "specificity =",round(specificity,4), "gmean =",round(gmean,4)))
+#"accuracy = 0.9911 sensitivity = 0 specificity = 1 gmean = 0"
+
+
+#######################################
+
+#part i
+
+#explanation
+#The AUC deals with differentiating between a randomly selected positive and negative
+#example. It is independent of the regression cutoff selected. So, in the context of this
+#problem, it is the probability the model can correctly differentiate between a randomly
+#selected patient will survive and a randomly selected patient will not survive. According to the
+#R output, AUC=0.5
+
+library('ROCR')
+
+glm.pred_numeric <- ifelse(glm.pred=="Yes", 1, 0)
+death_yn.testData_numeric <- ifelse(death_yn.testData=="Yes", 1, 0)
+  
+pred <- prediction(glm.pred_numeric,death_yn.testData_numeric)
+print(paste("AUC is ",round(as.numeric(performance(pred, "auc")@y.values),3)))
+#"AUC is  0.5"
+
+#######################################
+
+#part j
+
+df_test1 <- Covid
+dim(df_test1) #3124728       7
+
+#remove rows with any variable having "Missing" values
+#Covid$Race.Ethnicity, Covid$hosp_yn, Covid$medcond_yn, Covid$death_yn
+
+#install.packages("stringr", dependencies=TRUE)
+require(stringr)
+df_test2 <- df_test1[!(str_trim(df_test1$Race.Ethnicity)=="Missing" |
+                         str_trim(df_test1$hosp_yn)=="Missing" | 
+                         str_trim(df_test1$medcond_yn)=="Missing" |
+                         str_trim(df_test1$death_yn)=="Missing"),]
+dim(df_test2) #220001      7
+
+Covid_missingRemoved <- df_test2
+
+#checking values to see if all "Missing" records are removed 
+table(Covid_missingRemoved$sex)
+table(Covid_missingRemoved$age_group)
+table(Covid_missingRemoved$Race.Ethnicity)
+table(Covid_missingRemoved$hosp_yn)
+table(Covid_missingRemoved$medcond_yn)
+table(Covid_missingRemoved$death_yn)
+
+
+#split data into train and test
+set.seed(144)
+library(caTools)
+split = sample.split(Covid_missingRemoved$death_yn, SplitRatio = 0.7)
+train = subset(Covid_missingRemoved,split==TRUE)
+test = subset(Covid_missingRemoved,split==FALSE)
+dim(train) #154001      7
+dim(test)  #66000     7
+
+#logistic regression model
+glm.fit = glm(death_yn~sex+age_group+Race.Ethnicity+hosp_yn+medcond_yn , 
+              data=train, 
+              family=binomial(logit))
+summary(glm.fit)
+#variables with low p.values are significant when comparing against alpha=0.05
+#variables are significant in this model
+#sexMale, age_group20 - 29 Years, age_group30 - 39 Years,  age_group40 - 49 Years,  age_group50 - 59 Years, age_group60 - 69 Years,
+#age_group70 - 79 Years, age_group80+ Years, hosp_ynYes, medcond_ynYes
+
+#######################################
+
+#coefficient of the “sexMale” variable
+print(paste("coefficient of the “sexMale” variable =",round(summary(glm.fit)$coef["sexMale",1],4)))
+#"coefficient of the “sexMale” variable = 0.3294"
+
+#explanation
+#For COVID-19 patients A and B who are identical other than A having sex as Male, 
+#the predicted log odds of A is 0.3294 more than the predicted log odds of B.
+#Then we have:
+#      ln(odds of A) = ln(odds of B) + 0.3294
+#=)  e^ln(odds of A) = e^ln(odds of B) + 0.3294
+#=)  e^ln(odds of A) = e^ln(odds of B) * e^0.3294
+#=)      (odds of A) = e^0.3294(odds of B) = 1.3901(odds of B)
+
+print(paste("value of e^0.3294 =",round(exp(0.3294),4)))
+#"value of e^0.3294 = 1.3901"
+
+#######################################
+
+#odd's ratio of one is 75 years old and the other one is 36 years old.
+
+print(paste("coefficient of the “age_group70 - 79 Years” variable =",round(summary(glm.fit)$coef["age_group70 - 79 Years",1],4)))
+#"coefficient of the “age_group70 - 79 Years” variable = 3.8196"
+
+print(paste("coefficient of the “age_group30 - 39 Years” variable =",round(summary(glm.fit)$coef["age_group30 - 39 Years",1],4)))
+# "coefficient of the “age_group30 - 39 Years” variable = 1.354"
+
+#differnce in value is 2.4656
+round(summary(glm.fit)$coef["age_group70 - 79 Years",1],4) - round(summary(glm.fit)$coef["age_group30 - 39 Years",1],4)
+
+#explanation
+#For COVID-19 patients A and B who are identical other than A having age as 75 and 36 respectively, 
+#the predicted log odds of A is 2.4656 more than the predicted log odds of B.
+#Then we have:
+#      ln(odds of A) = ln(odds of B) + 2.4656
+#=)  e^ln(odds of A) = e^ln(odds of B) + 2.4656
+#=)  e^ln(odds of A) = e^ln(odds of B) * e^2.4656
+#=)      (odds of A) = e^2.4656(odds of B) = 11.7705(odds of B)
+
+print(paste("value of e^2.4656 =",round(exp(2.4656),4)))
+#"value of e^2.4656 = 11.7705"
+
+#######################################
+
+#What do you observe about the risk of COVID death for people of color versus white people?
+
+#Race.EthnicityAsian, Non-Hispanic                                    0.485468    
+#Race.EthnicityBlack, Non-Hispanic                                    0.588628    
+#Race.EthnicityHispanic/Latino                                        0.226666    
+#Race.EthnicityMultiple/Other, Non-Hispanic                           0.502562    
+#Race.EthnicityNative Hawaiian/Other Pacific Islander, Non-Hispanic   0.507642    
+#Race.EthnicityWhite, Non-Hispanic                                    0.120024    
+
+#based on the p.value, we see that white people and people of color p.value is not <<< alpha=0.05
+
+#from this we can say that the risk of COVID death is more in people of color compared to white people
+
+#######################################
+
+patientA <- data.frame("sex"=factor("Female"),"age_group"=factor("20 - 29 Years"),
+                       "Race.Ethnicity"=factor("Asian, Non-Hispanic"),"hosp_yn"=factor("No"),
+                       "medcond_yn"=factor("No"))
+glm.pred = predict.glm(glm.fit,newdata=patientA)
+glm.pred1 = predict.glm(glm.fit,newdata=patientA,type="response")
+print(paste("patientA survival:","odds =",round(glm.pred,4),"and probability=",round(glm.pred1,4)))
+#"patientA survival: odds = -7.0947 and probability= 8e-04"
+
+
+patientB <- data.frame("sex"=factor("Female"),"age_group"=factor("80+ Years"),
+                       "Race.Ethnicity"=factor("Asian, Non-Hispanic"),"hosp_yn"=factor("No"),
+                       "medcond_yn"=factor("Yes"))
+glm.pred = predict.glm(glm.fit,newdata=patientB)
+glm.pred1 = predict.glm(glm.fit,newdata=patientB,type="response")
+print(paste("patientB survival:","odds =",round(glm.pred,4),"and probability=",round(glm.pred1,4)))
+#"patientB survival: odds = -2.3434 and probability= 0.0876"
+
+#######################################
+
+#model’s predicted probabilities for patients in the testing set
+glm.pred_testData = predict(glm.fit,test,type="response")
+#glm.pred_testData
+
+#threshold = 0.2
+
+#creating probability of "death_yn" column based on threshold values on test data
+glm.pred = rep("No",66000)
+glm.pred[glm.pred_testData >.2] = "Yes"
+#glm.pred
+
+#actual value of "death_yn" column in test data
+death_yn.testData = factor(test$death_yn)
+#death_yn.testData
+
+#making it look simiar to slide
+table(death_yn.testData,glm.pred) # actual vs prediction
+
+tp = sum(glm.pred=="Yes" & death_yn.testData=="Yes")
+tn = sum(glm.pred=="No" & death_yn.testData=="No")
+fp = sum(glm.pred=="Yes" & death_yn.testData=="No")
+fn = sum(glm.pred=="No" & death_yn.testData=="Yes")
+
+print(paste("tp =",tp,"tn =",tn, "fp =",fp,"fn =",fn))
+#"tp = 638 tn = 63349 fp = 1268 fn = 745"
+
+accuracy <- (tp+tn)/(tp+tn+fp+fn)
+sensitivity <- tp/(tp+fn)
+specificity <- tn/(tn+fp)
+gmean <- sqrt(sensitivity*specificity)
+
+print(paste("accuracy =",round(accuracy,4), "sensitivity =",round(sensitivity,4),
+            "specificity =",round(specificity,4), "gmean =",round(gmean,4)))
+#"accuracy = 0.9695 sensitivity = 0.4613 specificity = 0.9804 gmean = 0.6725"
+
+#######################################
+
+#accuracy of a simple model that predicts that all patients will survive
+
+#creating probability of "death_yn" column as "No" i.e. no death => all patient survive
+glm.pred = rep("No",66000)
+#glm.pred
+
+#actual value of "death_yn" column in test data
+death_yn.testData = factor(test$death_yn)
+#death_yn.testData
+
+#making it look simiar to slide
+table(death_yn.testData,glm.pred) # actual vs prediction
+
+tp = sum(glm.pred=="Yes" & death_yn.testData=="Yes")
+tn = sum(glm.pred=="No" & death_yn.testData=="No")
+fp = sum(glm.pred=="Yes" & death_yn.testData=="No")
+fn = sum(glm.pred=="No" & death_yn.testData=="Yes")
+
+print(paste("tp =",tp,"tn =",tn, "fp =",fp,"fn =",fn))
+#"tp = 0 tn = 64617 fp = 0 fn = 1383"
+
+accuracy <- (tp+tn)/(tp+tn+fp+fn)
+sensitivity <- tp/(tp+fn)
+specificity <- tn/(tn+fp)
+gmean <- sqrt(sensitivity*specificity)
+
+print(paste("accuracy =",round(accuracy,4), "sensitivity =",round(sensitivity,4),
+            "specificity =",round(specificity,4), "gmean =",round(gmean,4)))
+#"accuracy = 0.979 sensitivity = 0 specificity = 1 gmean = 0"
+
+#######################################
+
+#explanation
+#According to the R output, AUC=0.5
+
+library('ROCR')
+
+glm.pred_numeric <- ifelse(glm.pred=="Yes", 1, 0)
+death_yn.testData_numeric <- ifelse(death_yn.testData=="Yes", 1, 0)
+
+pred <- prediction(glm.pred_numeric,death_yn.testData_numeric)
+print(paste("AUC is ",round(as.numeric(performance(pred, "auc")@y.values),3)))
+#"AUC is  0.5"
