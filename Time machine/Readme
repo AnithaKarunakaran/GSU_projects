@@ -1,0 +1,14 @@
+# References used are:
+https://keras.io/examples/generative/cyclegan/
+https://github.com/simontomaskarlsson/CycleGAN-Keras/blob/master/model.py
+https://github.com/simontomaskarlsson/CycleGAN-Keras/blob/master/load_data.py
+https://github.com/torch/distro/blob/master/win-files/README.md
+https://www.tensorflow.org/datasets/catalog/cycle_gan
+https://blog.tensorflow.org/2020/10/how-tensorflow-docs-uses-juypter-notebooks.html
+https://colab.research.google.com/github/tensorflow/docs/blob/master/site/en/tutorials/generative/cyclegan.ipynb#scrollTo=KUgSnmy2nqSP
+https://github.com/tensorflow/examples/blob/master/tensorflow_examples/models/pix2pix/pix2pix.py
+https://github.com/tensorflow/docs/blob/master/site/en/tutorials/generative/cyclegan.ipynb
+https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/f13aab8148bd5f15b9eb47b690496df8dadbab0c/CycleGAN.ipynb
+https://www.tensorflow.org/tutorials/generative/cyclegan
+https://machinelearningmastery.com/cyclegan-tutorial-with-keras/
+https://github.com/phillipi/pix2pix/blob/master/models/download_model.sh
