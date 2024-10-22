@@ -1,5 +1,5 @@
 What does attrition model tell us about customers?
-- customers with declining trend on transaction usage or thr number of active users are highly likely to attrite
+- customers with declining trend on transaction usage or the number of active users are highly likely to attrite
 - customers with more transaction months in past 6 months or with more number of production in transaction are less likely to attrite
 - customers who asked for support from customer service on password, product and security issues are less likely to attrite. Customers with billing questions are more likely to attrite
 - customers who have been on the books for a long time are likely to attrite
